@@ -147,7 +147,24 @@ main,footer,.nav{position:relative;z-index:1}
 .hero-static .sub,.hero-static .cta-row{opacity:1;transform:none}
 .hero-static .cta-row{justify-content:flex-start}
 .hero-static .brasa-art svg{width:min(420px,84vw);bottom:auto;top:16vh}
-@media (max-width:720px),(orientation:portrait) and (max-width:1024px),(orientation:portrait) and (pointer:coarse),(orientation:landscape) and (pointer:coarse) and (max-height:560px),(prefers-reduced-motion:reduce){
+/* celular e tablet em pé: scrub com vídeo vertical e frases empilhadas */
+@media (max-width:720px),(orientation:portrait) and (max-width:1024px),(orientation:portrait) and (pointer:coarse){
+  #hero{height:560vh}
+  .band--pair{grid-template-columns:1fr;grid-template-rows:1fr 1fr;padding:15vh var(--gutter) 24vh}
+  .side{font-size:clamp(2.6rem,12.5vw,4.6rem)}
+  .side--l{grid-column:1;grid-row:1;justify-self:start;text-align:left;align-self:start}
+  .side--r{grid-column:1;grid-row:2;justify-self:end;text-align:right;align-self:end}
+  .side::before{inset:-40% -20%}
+  .band--settle{padding-bottom:16vh}
+  .settle h1{font-size:clamp(2.6rem,13vw,5rem)}
+  .settle .sub{font-size:1.05rem}
+  .hero-cta{left:var(--gutter);right:var(--gutter);bottom:max(20px,env(safe-area-inset-bottom))}
+  .hero-cta .btn{flex:1;padding:.95rem .6rem;font-size:.86rem;white-space:nowrap}
+  .hero-cta .arrow{display:none}
+  .cue{display:none}
+  .ring{top:84px;bottom:auto}
+}
+@media (orientation:landscape) and (pointer:coarse) and (max-height:560px),(prefers-reduced-motion:reduce){
   #hero{display:none}
   .hero-static{display:flex}
 }
@@ -722,9 +739,15 @@ addEventListener('DOMContentLoaded', () => {
   const video = document.getElementById('heroVideo');
   const ring = stage.querySelector('.ring');
   const cue = stage.querySelector('.cue');
-  const VIDEO_URL = 'assets/hero-scrub.mp4';
-  const VIDEO_BYTES = 11655470;
-  const POSTER_URL = 'assets/hero-poster.jpg';
+  const MOBILE_Q = [
+    '(max-width: 720px)',
+    '(orientation: portrait) and (max-width: 1024px)',
+    '(orientation: portrait) and (pointer: coarse)'
+  ];
+  const isPhone = () => MOBILE_Q.some(q => matchMedia(q).matches);
+  let VIDEO_URL = 'assets/hero-scrub.mp4';
+  let VIDEO_BYTES = 11655470;
+  let POSTER_URL = 'assets/hero-poster.jpg';
   const ENDING_URL = 'assets/hero-ending.jpg';
 
   const bands = [...stage.querySelectorAll('.band')].map(el => ({
@@ -793,6 +816,7 @@ addEventListener('DOMContentLoaded', () => {
   }
   function initHeroOnce() {
     if (heroInit) return; heroInit = true;
+    if (isPhone()) { VIDEO_URL = 'assets/hero-scrub-m.mp4'; VIDEO_BYTES = 5104061; POSTER_URL = 'assets/hero-poster-m.jpg'; }
     const posterLayer = stage.querySelector('.poster');
     const img = new Image();
     img.onload = () => { posterLayer.style.backgroundImage = "url('" + POSTER_URL + "')"; stage.classList.add('has-poster'); startBlobFetch(); };
@@ -819,15 +843,16 @@ addEventListener('DOMContentLoaded', () => {
     clearTimeout(watchdog); ring.style.setProperty('--ld', 0);
     video.src = URL.createObjectURL(new Blob(chunks, { type: 'video/mp4' }));
     video.load();
-    video.addEventListener('canplay', () => { requestSeek(heroProgress() * video.duration); stage.classList.add('video-ready'); }, { once: true });
+    video.addEventListener('canplay', () => {
+      const show = () => { requestSeek(heroProgress() * video.duration); stage.classList.add('video-ready'); };
+      const pr = video.play(); // celulares só pintam quadros depois de um play
+      if (pr && pr.then) pr.then(() => { video.pause(); show(); }).catch(show); else show();
+    }, { once: true });
   }
   function failVideo() { ring.style.display = 'none'; stage.classList.add('video-failed'); }
 
   // os cinco portões, decididos ao vivo
   const GATES = [
-    '(max-width: 720px)',
-    '(orientation: portrait) and (max-width: 1024px)',
-    '(orientation: portrait) and (pointer: coarse)',
     '(orientation: landscape) and (pointer: coarse) and (max-height: 560px)',
     '(prefers-reduced-motion: reduce)'
   ];
